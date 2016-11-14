@@ -26,10 +26,9 @@ defmodule Ticker do
         generator(clients)
     after
       @interval ->
-        IO.puts "tick"
         Enum.each clients, fn client ->
           IO.puts "send to #{inspect client} from #{inspect self}"
-          send client, {:tick, client}
+          send client, {:tick}
         end
         generator(clients)
     end
@@ -46,8 +45,8 @@ defmodule Client do
 
   def receiver do
     receive do
-      {:tick, client} ->
-        IO.puts "tock in #{inspect client}"
+      {:tick} ->
+        IO.puts DateTime.to_iso8601(DateTime.utc_now)
         receiver
       {:message, from, msg} ->
         IO.puts "#{msg} from #{inspect from}"
