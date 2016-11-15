@@ -1,6 +1,6 @@
 defmodule Ticker do
   @name :ticker
-  @interval 10000
+  @interval 5000
 
   def start do
     IO.puts "server start..."
@@ -18,11 +18,9 @@ defmodule Ticker do
     receive do
       {:register, pid} ->
         generator [pid|clients]
-      {:send_message, pid, msg} ->
-        nodes = List.delete(clients, pid)
-        Enum.each nodes, fn client ->
-          send client, {:message, client, msg}
-        end
+      {:send_message, pid, msg, sender} ->
+        List.delete(clients, pid)
+        |> Enum.each(fn client -> send client, {:message, msg, sender} end)
         generator(clients)
     after
       @interval ->
@@ -46,15 +44,17 @@ defmodule Client do
   def receiver do
     receive do
       {:tick} ->
-        IO.puts DateTime.to_iso8601(DateTime.utc_now)
+        DateTime.utc_now
+        |> DateTime.to_iso8601
+        |> IO.puts
         receiver
-      {:message, from, msg} ->
-        IO.puts "#{msg} from #{inspect from}"
+      {:message, msg, sender} ->
+        IO.puts "#{msg} from #{inspect sender}"
         receiver
     end
   end
 
   def message(msg) do
-    send :global.whereis_name(:ticker), {:send_message, Agent.get(__MODULE__, &(&1)), msg}
+    send :global.whereis_name(:ticker), {:send_message, Agent.get(__MODULE__, &(&1)), msg, Node.self}
   end
 end
